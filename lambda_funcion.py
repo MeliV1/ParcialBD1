@@ -1,30 +1,48 @@
 import requests
 import boto3
-from datetime import datetime
+import datetime
 
 def lambda_handler(event, context):
-    s3 = boto3.client('s3')
-    # Se guarda en el bucket s3
-    bucket_name = 'landing-casas-pbd'
-    # Genera la fecha actual (en UTC o ajusta a tu zona horaria)
-    date_str = datetime.utcnow().strftime('%Y-%m-%d')
+    # Nombre del bucket de destino
+    BUCKET_NAME = "landing-casas-pbd"
     
-    # Itera sobre las páginas de 1 a 10
+    # URL base con los parámetros fijos
+    BASE_URL = "https://casas.mitula.com.co/find?operationType=sell&propertyType=mitula_studio_apartment&text=Bogot%C3%A1"
+    
+    s3_client = boto3.client("s3")
+    
+    # Obtener la fecha actual para formar el nombre de los archivos
+    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    
+    # Headers para evitar caché y simular un navegador real
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
+    }
+    
+    # Iterar por las primeras 10 páginas y guardarlas individualmente
     for page in range(1, 11):
-        url = f'https://casas.mitula.com.co/find?operationType=sell&propertyType=mitula_studio_apartment&geoId=mitula-CO-poblacion-0000014156&text=Bogot%C3%A1%2C++%28Cundinamarca%29'
-        response = requests.get(url)
-        
+        if page == 1:
+            url = BASE_URL
+        else:
+            url = f"{BASE_URL}&page={page}"
+            
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
-            # Define la clave del objeto en S3, se puede incluir el número de página
-            file_key = f'{date_str}-page-{page}.html'
-            s3.put_object(
-                Bucket=bucket_name,
+            # Definir el nombre del archivo en S3
+            file_key = f"{today}-page-{page}.html"
+            s3_client.put_object(
+                Bucket=BUCKET_NAME,
                 Key=file_key,
-                Body=response.text,
-                ContentType='text/html'
+                Body=response.text.encode("utf-8"),
+                ContentType="text/html"
             )
-            print(f"Página {page} guardada en S3 como {file_key}")
+            print(f"Página {page} guardada en s3://{BUCKET_NAME}/{file_key}")
         else:
             print(f"Error al descargar la página {page}: {response.status_code}")
     
-    return {"status": "completed"}
+    return {
+        "statusCode": 200,
+        "body": f"Páginas guardadas en s3://{BUCKET_NAME}/"
+    }

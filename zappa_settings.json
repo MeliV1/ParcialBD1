@@ -20,8 +20,24 @@
         "events": [
             {
                 "function": "lambda_function.lambda_handler",
-                "expression": "rate(15 minutes)"
+                "expression": "rate(30 minutes)"
             }
+        ]
+    }
+    "env2": {
+        "app_function": "process_html.lambda_handler",
+        "aws_region": "us-east-1",
+        "profile_name": "default",
+        "project_name": "parcialbd1_process",
+        "runtime": "python3.10",
+        "s3_bucket": "zappa-oyo72mif0",
+        "manage_roles": false,
+        "role_name": "LabRole",
+        "exclude": [
+            "boto3",
+            "botocore",
+            "s3transfer",
+            "dateutil"
         ]
     }
 }
